@@ -1,15 +1,15 @@
-from fastapi import FastAPI, HTTPException
+import os
+import datetime
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import swisseph as swe
-from datetime import datetime
+from core.rules_engine import evaluate_day
 
-app = FastAPI(title="Saath Calculator Engine")
+app = FastAPI(title="Saath Calculator API (Vijayshwar Tradition)")
 
-# Allow your future Vercel frontend to talk to this backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # We will lock this down to your Vercel URL later
+    allow_origins=["*"], # Keep open for now, lock to Vercel URL later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -19,33 +19,31 @@ class SaathRequest(BaseModel):
     event_type: str
     start_date: str
     end_date: str
+    config: dict = {
+        "allow_purnima": False,
+        "strict_chaturmas": True
+    }
 
 @app.get("/")
 def read_root():
-    return {"status": "online", "message": "Saath Engine is listening."}
+    return {"status": "online", "message": "Upgraded Saath Engine is running."}
 
-@app.post("/api/calculate")
-def calculate_saath(req: SaathRequest):
-    try:
-        # Prove the engine works by calculating the Moon's longitude for the start date
-        dt = datetime.strptime(req.start_date, "%Y-%m-%d")
-        jd = swe.julday(dt.year, dt.month, dt.day, 12.0)
-        swe.set_sid_mode(swe.SIDM_LAHIRI)
+@app.post("/api/v1/calculate")
+def calculate_muhurat(request: SaathRequest):
+    start = datetime.datetime.strptime(request.start_date, "%Y-%m-%d").date()
+    end = datetime.datetime.strptime(request.end_date, "%Y-%m-%d").date()
+    
+    results = []
+    current_date = start
+    
+    while current_date <= end:
+        day_eval = evaluate_day(current_date, request.event_type, request.config)
+        if day_eval["is_auspicious"]:
+            results.append(day_eval)
+        current_date += datetime.timedelta(days=1)
         
-        moon_pos, _ = swe.calc_ut(jd, swe.MOON)
-        
-        return {
-            "event": req.event_type,
-            "julian_day": jd,
-            "moon_longitude_proof": round(moon_pos[0], 2),
-            "results": [
-                {
-                    "date": req.start_date,
-                    "tithi": "Dummy Tithi (Engine Alive)",
-                    "nakshatra": "Dummy Nakshatra",
-                    "score": "Excellent"
-                }
-            ]
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return {
+        "event": request.event_type,
+        "range_evaluated": f"{request.start_date} to {request.end_date}",
+        "auspicious_days": results
+    }
