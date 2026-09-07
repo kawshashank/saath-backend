@@ -14,18 +14,51 @@ NAKSHATRA_NAMES = [
     "Dhanishta", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
 ]
 
+def get_angular_distance(lon1: float, lon2: float) -> float:
+    diff = abs(lon1 - lon2)
+    return min(diff, 360 - diff)
+
+def check_global_blockers(astro_data: dict) -> bool:
+    """Returns True if the day is BLOCKED by a major negative astrological event."""
+    sun_lon = astro_data["sun_lon"]
+    tithi = astro_data["tithi_index"]
+    sun_rashi = astro_data["sun_rashi"]
+    jup_lon = astro_data["jup_lon"]
+    ven_lon = astro_data["ven_lon"]
+
+    # 1. Pitra Paksha (Mahalaya Paksha)
+    # Occurs during Krishna Paksha (Tithis 16-30) when the Sun is transitioning toward Virgo (approx 135° to 180°)
+    if 16 <= tithi <= 30 and 135 <= sun_lon <= 180:
+        return True
+        
+    # 2. Kharmas / Malamas
+    # Strictly prohibited when Sun is in Dhanu (Sagittarius, Rashi 9) or Meena (Pisces, Rashi 12)
+    if sun_rashi == 9 or sun_rashi == 12:
+        return True
+        
+    # 3. Guru Astha (Jupiter Combust)
+    if get_angular_distance(sun_lon, jup_lon) < 11:
+        return True
+        
+    # 4. Shukra Astha (Venus Combust)
+    if get_angular_distance(sun_lon, ven_lon) < 10:
+        return True
+
+    return False
+
 def evaluate_khandar(tithi: int, nakshatra: int) -> bool:
     allowed_tithis = [2, 3, 5, 7, 10, 11, 12, 13, 17, 18, 20, 22, 25, 26, 27, 28]
     allowed_nakshatras = [4, 5, 10, 12, 13, 15, 17, 19, 21, 26, 27]
     return (tithi in allowed_tithis) and (nakshatra in allowed_nakshatras)
 
-def evaluate_mekhal(tithi: int, nakshatra: int) -> bool:
+def evaluate_mekhal(tithi: int, nakshatra: int, sun_rashi: int) -> bool:
     allowed_tithis = [2, 3, 5, 7, 10, 11, 13, 17, 18, 20, 22, 25, 26, 28]
     allowed_nakshatras = [1, 7, 8, 13, 14, 15, 22, 23, 24, 5, 27]
-    return (tithi in allowed_tithis) and (nakshatra in allowed_nakshatras)
+    # Mekhal is strictly performed during Uttarayana (Sun moving North: Capricorn to Gemini)
+    is_uttarayana = sun_rashi in [10, 11, 12, 1, 2, 3]
+    return (tithi in allowed_tithis) and (nakshatra in allowed_nakshatras) and is_uttarayana
 
 def evaluate_kahnethar(tithi: int, nakshatra: int) -> bool:
-    # Added 6 and 21 to include Shashthi
     allowed_tithis = [2, 3, 5, 6, 7, 10, 11, 12, 13, 17, 18, 20, 21, 22, 25, 26, 27, 28]
     allowed_nakshatras = [1, 4, 5, 8, 12, 13, 14, 15, 17, 21, 22, 23, 24, 26, 27]
     return (tithi in allowed_tithis) and (nakshatra in allowed_nakshatras)
@@ -38,11 +71,17 @@ def evaluate_day(date_obj, event_type: str, config: dict) -> dict:
     
     t_idx = astro_data["tithi_index"]
     n_idx = astro_data["nakshatra_index"]
+    sun_rashi = astro_data["sun_rashi"]
     
-    if event_type == "khandar":
+    # Check for global Jantri blockages first
+    is_blocked = check_global_blockers(astro_data)
+    
+    if is_blocked:
+        is_ausp = False
+    elif event_type == "khandar":
         is_ausp = evaluate_khandar(t_idx, n_idx)
     elif event_type == "mekhal":
-        is_ausp = evaluate_mekhal(t_idx, n_idx)
+        is_ausp = evaluate_mekhal(t_idx, n_idx, sun_rashi)
     elif event_type == "kahnethar":
         is_ausp = evaluate_kahnethar(t_idx, n_idx)
     else:
