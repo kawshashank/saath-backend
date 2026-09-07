@@ -5,12 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from core.rules_engine import evaluate_day
 
-app = FastAPI(title="Saath Calculator API (Vijayshwar Tradition)")
+app = FastAPI(title="Vijayshwar Saath Calculator Engine")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Keep open for now, lock to Vercel URL later
-    allow_credentials=False,
+    allow_origins=["*"],
+    allow_credentials=False, 
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -19,14 +19,7 @@ class SaathRequest(BaseModel):
     event_type: str
     start_date: str
     end_date: str
-    config: dict = {
-        "allow_purnima": False,
-        "strict_chaturmas": True
-    }
-
-@app.get("/")
-def read_root():
-    return {"status": "online", "message": "Upgraded Saath Engine is running."}
+    config: dict = {}
 
 @app.post("/api/v1/calculate")
 def calculate_muhurat(request: SaathRequest):
@@ -44,6 +37,6 @@ def calculate_muhurat(request: SaathRequest):
         
     return {
         "event": request.event_type,
-        "range_evaluated": f"{request.start_date} to {request.end_date}",
+        "range": f"{request.start_date} to {request.end_date}",
         "auspicious_days": results
     }
