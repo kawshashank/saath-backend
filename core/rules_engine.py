@@ -18,29 +18,47 @@ def get_angular_distance(lon1: float, lon2: float) -> float:
     diff = abs(lon1 - lon2)
     return min(diff, 360 - diff)
 
-def check_global_blockers(astro_data: dict) -> bool:
-    """Returns True if the day is BLOCKED by a major negative astrological event."""
+def check_global_blockers(astro_data: dict, date_obj) -> bool:
+    """Returns True if the day is BLOCKED by any overarching Jantri constraint."""
     sun_lon = astro_data["sun_lon"]
     tithi = astro_data["tithi_index"]
     sun_rashi = astro_data["sun_rashi"]
     jup_lon = astro_data["jup_lon"]
     ven_lon = astro_data["ven_lon"]
+    karana = astro_data["karana_index"]
+    yoga = astro_data["yoga_index"]
+    is_sankranti = astro_data["is_sankranti"]
 
-    # 1. Pitra Paksha (Mahalaya Paksha)
-    # Occurs during Krishna Paksha (Tithis 16-30) when the Sun is transitioning toward Virgo (approx 135° to 180°)
+    # 1. Vaar (Day of Week): Block Tuesday (1) and Saturday (5)
+    if date_obj.weekday() in [1, 5]:
+        return True
+        
+    # 2. Sankranti: Block days where the Sun shifts to a new Rashi
+    if is_sankranti:
+        return True
+        
+    # 3. Nithya Yogas: Block Vyatipata (17) and Vaidhriti (27)
+    if yoga in [17, 27]:
+        return True
+        
+    # 4. Karana (Bhadra / Vishti): Block destructive Karana alignments
+    # Vishti aligns at specific mathematical intervals between karana 2 and 57
+    if 2 <= karana <= 57 and (karana - 1) % 7 == 0:
+        return True
+
+    # 5. Pitra Paksha (Mahalaya Paksha)
     if 16 <= tithi <= 30 and 135 <= sun_lon <= 180:
         return True
         
-    # 2. Kharmas / Malamas
-    # Strictly prohibited when Sun is in Dhanu (Sagittarius, Rashi 9) or Meena (Pisces, Rashi 12)
+    # 6. Kharmas / Malamas (Strictly prohibited when Sun is in Dhanu or Meena)
     if sun_rashi == 9 or sun_rashi == 12:
         return True
         
-    # 3. Guru Astha (Jupiter Combust)
+    # 7. Guru Astha (Jupiter Combust)
     if get_angular_distance(sun_lon, jup_lon) < 11:
         return True
         
-    # 4. Shukra Astha (Venus Combust)
+    # 8. Shukra Astha (Venus Combust)
     if get_angular_distance(sun_lon, ven_lon) < 10:
         return True
 
@@ -59,6 +77,7 @@ def evaluate_mekhal(tithi: int, nakshatra: int, sun_rashi: int) -> bool:
     return (tithi in allowed_tithis) and (nakshatra in allowed_nakshatras) and is_uttarayana
 
 def evaluate_kahnethar(tithi: int, nakshatra: int) -> bool:
+    # Including 6 and 21 to ensure Shashthi is mapped properly
     allowed_tithis = [2, 3, 5, 6, 7, 10, 11, 12, 13, 17, 18, 20, 21, 22, 25, 26, 27, 28]
     allowed_nakshatras = [1, 4, 5, 8, 12, 13, 14, 15, 17, 21, 22, 23, 24, 26, 27]
     return (tithi in allowed_tithis) and (nakshatra in allowed_nakshatras)
@@ -73,8 +92,8 @@ def evaluate_day(date_obj, event_type: str, config: dict) -> dict:
     n_idx = astro_data["nakshatra_index"]
     sun_rashi = astro_data["sun_rashi"]
     
-    # Check for global Jantri blockages first
-    is_blocked = check_global_blockers(astro_data)
+    # Run the strict global Panchang filters first
+    is_blocked = check_global_blockers(astro_data, date_obj)
     
     if is_blocked:
         is_ausp = False
