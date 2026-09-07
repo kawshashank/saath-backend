@@ -10,7 +10,7 @@ app = FastAPI(title="Saath Calculator API (Vijayshwar Tradition)")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], # Keep open for now, lock to Vercel URL later
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
