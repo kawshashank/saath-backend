@@ -5,24 +5,49 @@ import datetime
 SRINAGAR_LON = 74.7973
 SRINAGAR_LAT = 34.0837
 SRINAGAR_ALT = 1585.0
+SRINAGAR_UTC_OFFSET_HOURS = 5.5  # India has no daylight-saving adjustment.
+
+def _get_srinagar_solar_event(date_obj: datetime.date, event_flag: int) -> float:
+    """Return the UT Julian date of a Srinagar solar event.
+
+    ``rise_trans`` returns ``(status, event_times)``.  The former code passed
+    its arguments in the wrong order and then returned the status code rather
+    than ``event_times[0]``.  That silently made downstream panchang values
+    use an arbitrary instant instead of the local sunrise/sunset.
+    """
+    # ``rise_trans`` searches forward from its input. Start at local midnight,
+    # not 00:00 UTC: Srinagar's summer sunrise can occur on the previous UTC
+    # date and would otherwise be incorrectly taken from the next civil day.
+    jd_start = (
+        swe.julday(date_obj.year, date_obj.month, date_obj.day, 0.0)
+        - SRINAGAR_UTC_OFFSET_HOURS / 24
+    )
+    geopos = (SRINAGAR_LON, SRINAGAR_LAT, SRINAGAR_ALT)
+    try:
+        status, event_times = swe.rise_trans(
+            jd_start,
+            swe.SUN,
+            event_flag,
+            geopos,
+            flags=swe.FLG_SWIEPH,
+        )
+        if status == 0:
+            return event_times[0]
+        raise RuntimeError("Swiss Ephemeris could not find the solar event")
+    except Exception as exc:
+        # Srinagar always has a sunrise/sunset, so reaching this path means an
+        # infrastructure problem rather than a valid astronomical condition.
+        raise RuntimeError(
+            f"Unable to calculate Srinagar solar event for {date_obj.isoformat()}"
+        ) from exc
+
 
 def get_srinagar_sunrise(date_obj: datetime.date) -> float:
-    jd_start = swe.julday(date_obj.year, date_obj.month, date_obj.day, 0.0)
-    geopos = (SRINAGAR_LON, SRINAGAR_LAT, SRINAGAR_ALT)
-    try:
-        res = swe.rise_trans(jd_start, swe.SUN, swe.FLG_SWIEPH, swe.CALC_RISE, geopos)
-        while isinstance(res, tuple): res = res[0]
-        return res
-    except Exception: return jd_start
+    return _get_srinagar_solar_event(date_obj, swe.CALC_RISE)
+
 
 def get_srinagar_sunset(date_obj: datetime.date) -> float:
-    jd_start = swe.julday(date_obj.year, date_obj.month, date_obj.day, 0.0)
-    geopos = (SRINAGAR_LON, SRINAGAR_LAT, SRINAGAR_ALT)
-    try:
-        res = swe.rise_trans(jd_start, swe.SUN, swe.FLG_SWIEPH, swe.CALC_SET, geopos)
-        while isinstance(res, tuple): res = res[0]
-        return res
-    except Exception: return jd_start + 0.5
+    return _get_srinagar_solar_event(date_obj, swe.CALC_SET)
 
 def get_astro_data(date_obj: datetime.date) -> dict:
     swe.set_sid_mode(swe.SIDM_LAHIRI)
@@ -59,7 +84,9 @@ def get_astro_data(date_obj: datetime.date) -> dict:
     is_sankranti = sun_rashi != (int(sun_pos_yest[0] / 30) + 1)
     
     ven_pos_tmrw, _ = swe.calc_ut(jd_sunrise + 1.0, swe.VENUS, swe.FLG_SIDEREAL)
-    is_venus_retro = ven_pos_tmrw[0] < ven_pos[0]
+    # Normalize across the 0°/360° boundary before determining daily motion.
+    ven_daily_motion = (ven_pos_tmrw[0] - ven_pos[0] + 180) % 360 - 180
+    is_venus_retro = ven_daily_motion < 0
     
     return {
         "tithi_sunrise": tithi_rise,

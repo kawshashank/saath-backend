@@ -14,27 +14,45 @@ NAKSHATRA_NAMES = [
     "Dhanishta", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
 ]
 
+# Udaya tithi--nakshatra combinations used by the Vijayshwar Jantri for
+# Kahnethar. This is a rule matrix, deliberately not a date/month lookup.
+KAHNETHAR_ALLOWED_PANCHANG_PAIRS = {
+    (2, 17), (2, 24), (2, 26),
+    (3, 27),
+    (4, 22),
+    (5, 22), (5, 27),
+    (7, 27),
+    (9, 6),
+    (10, 26),
+    (11, 8),
+    (12, 7),
+    (13, 1), (13, 5), (13, 8),
+    (16, 4),
+    (17, 5), (17, 11),
+    (20, 14),
+    (21, 15),
+}
+
 def get_angular_distance(lon1: float, lon2: float) -> float:
     diff = abs(lon1 - lon2)
     return min(diff, 360 - diff)
 
-def check_global_blockers(astro, date_obj) -> bool:
-    date_str = date_obj.strftime("%Y-%m-%d")
-    
-    # 1. Sankranti & Yoga & Karana
-    if astro["is_sankranti"]: return True
-    if astro["yoga_index"] in [17, 27]: return True
-    if 2 <= astro["karana_index"] <= 57 and (astro["karana_index"] - 1) % 7 == 0: return True
+def check_global_blockers(astro, date_obj, event_type: str) -> bool:
+    # Kahnethar is assessed by Udaya Panchang.  The Jantri includes dates on
+    # which Sankranti, Vishti, or Vyatipata/Vaidhriti occurs, so these cannot
+    # be used as unconditional whole-day rejections for that ceremony.
+    if event_type != "kahnethar":
+        if astro["is_sankranti"]: return True
+        if astro["yoga_index"] in [17, 27]: return True
+        if 2 <= astro["karana_index"] <= 57 and (astro["karana_index"] - 1) % 7 == 0: return True
 
     # 2. Pitra Paksha & Kharmas
     if 16 <= astro["tithi_sunrise"] <= 30 and 135 <= astro["sun_lon"] <= 180: return True
-    if astro["sun_rashi"] in [9, 12]: return True
+    # The Kahnethar Jantri includes Meena solar-month dates.  Kharmas remains
+    # a blocker for Khandar and Mekhal, but is not a blanket Kahnethar ban.
+    if event_type != "kahnethar" and astro["sun_rashi"] in [9, 12]: return True
         
-    # 3. Shukra Asta (Venus Combust) - Hardcoded known 2026 tables for absolute accuracy
-    if "2025-12-11" <= date_str <= "2026-02-01": return True
-    if "2026-10-12" <= date_str <= "2026-10-29": return True
-    
-    # Fallback planetary distance check
+    # 3. Shukra/Guru Asta, calculated from the actual day's longitudes.
     ven_threshold = 8 if astro["is_venus_retro"] else 10
     if get_angular_distance(astro["sun_lon"], astro["ven_lon"]) < ven_threshold: return True
     if get_angular_distance(astro["sun_lon"], astro["jup_lon"]) < 11: return True
@@ -65,21 +83,26 @@ def evaluate_mekhal(astro, date_obj) -> bool:
     return True
 
 def evaluate_kahnethar(astro, date_obj) -> bool:
-    # Kahnethar blocks Sunday (6) in addition to Tuesday (1) and Saturday (5)
-    if date_obj.weekday() in [1, 5, 6]: return False
+    # Jantri evidence permits Sunday Kahnethar. Tuesday and Saturday remain
+    # excluded as the ceremony's Vaar restrictions.
+    if date_obj.weekday() in [1, 5]: return False
     
-    allowed_tithis = [2, 3, 5, 6, 7, 10, 11, 12, 13, 17, 18, 20, 21, 22, 25, 26, 27, 28]
-    allowed_nakshatras = [1, 4, 5, 8, 12, 13, 14, 15, 17, 21, 22, 23, 24, 26, 27]
-    
-    if astro["tithi_sunrise"] not in allowed_tithis or astro["tithi_sunset"] not in allowed_tithis: return False
-    if astro["nakshatra_index"] not in allowed_nakshatras: return False
-    return True
+    # Vijayshwar Jantri Kahnethar eligibility is a tithi--nakshatra pairing,
+    # not the Cartesian product of two independent lists. Treating them as
+    # independent was the source of many false-positive dates (for example,
+    # a permitted tithi paired with Hasta or Chitra).
+    #
+    # These are Udaya (sunrise) limbs. A later tithi/karana transition must
+    # not erase an otherwise valid Jantri date.
+    return (
+        astro["tithi_sunrise"], astro["nakshatra_index"]
+    ) in KAHNETHAR_ALLOWED_PANCHANG_PAIRS
 
 def evaluate_day(date_obj, event_type: str, config: dict) -> dict:
     from .astro_calc import get_astro_data
     astro_data = get_astro_data(date_obj)
     
-    if check_global_blockers(astro_data, date_obj): is_ausp = False
+    if check_global_blockers(astro_data, date_obj, event_type): is_ausp = False
     elif event_type == "khandar": is_ausp = evaluate_khandar(astro_data, date_obj)
     elif event_type == "mekhal": is_ausp = evaluate_mekhal(astro_data, date_obj)
     elif event_type == "kahnethar": is_ausp = evaluate_kahnethar(astro_data, date_obj)
