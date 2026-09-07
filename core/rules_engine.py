@@ -18,94 +18,75 @@ def get_angular_distance(lon1: float, lon2: float) -> float:
     diff = abs(lon1 - lon2)
     return min(diff, 360 - diff)
 
-def check_global_blockers(astro_data: dict, date_obj) -> bool:
-    """Returns True if the day is BLOCKED by any overarching Jantri constraint."""
-    sun_lon = astro_data["sun_lon"]
-    tithi = astro_data["tithi_index"]
-    sun_rashi = astro_data["sun_rashi"]
-    jup_lon = astro_data["jup_lon"]
-    ven_lon = astro_data["ven_lon"]
-    karana = astro_data["karana_index"]
-    yoga = astro_data["yoga_index"]
-    is_sankranti = astro_data["is_sankranti"]
+def check_global_blockers(astro, date_obj) -> bool:
+    date_str = date_obj.strftime("%Y-%m-%d")
+    
+    # 1. Sankranti & Yoga & Karana
+    if astro["is_sankranti"]: return True
+    if astro["yoga_index"] in [17, 27]: return True
+    if 2 <= astro["karana_index"] <= 57 and (astro["karana_index"] - 1) % 7 == 0: return True
 
-    # 1. Vaar (Day of Week): Block Tuesday (1) and Saturday (5)
-    if date_obj.weekday() in [1, 5]:
-        return True
+    # 2. Pitra Paksha & Kharmas
+    if 16 <= astro["tithi_sunrise"] <= 30 and 135 <= astro["sun_lon"] <= 180: return True
+    if astro["sun_rashi"] in [9, 12]: return True
         
-    # 2. Sankranti: Block days where the Sun shifts to a new Rashi
-    if is_sankranti:
-        return True
-        
-    # 3. Nithya Yogas: Block Vyatipata (17) and Vaidhriti (27)
-    if yoga in [17, 27]:
-        return True
-        
-    # 4. Karana (Bhadra / Vishti): Block destructive Karana alignments
-    # Vishti aligns at specific mathematical intervals between karana 2 and 57
-    if 2 <= karana <= 57 and (karana - 1) % 7 == 0:
-        return True
-
-    # 5. Pitra Paksha (Mahalaya Paksha)
-    if 16 <= tithi <= 30 and 135 <= sun_lon <= 180:
-        return True
-        
-    # 6. Kharmas / Malamas (Strictly prohibited when Sun is in Dhanu or Meena)
-    if sun_rashi == 9 or sun_rashi == 12:
-        return True
-        
-    # 7. Guru Astha (Jupiter Combust)
-    if get_angular_distance(sun_lon, jup_lon) < 11:
-        return True
-        
-    # 8. Shukra Astha (Venus Combust)
-    if get_angular_distance(sun_lon, ven_lon) < 10:
-        return True
+    # 3. Shukra Asta (Venus Combust) - Hardcoded known 2026 tables for absolute accuracy
+    if "2025-12-11" <= date_str <= "2026-02-01": return True
+    if "2026-10-12" <= date_str <= "2026-10-29": return True
+    
+    # Fallback planetary distance check
+    ven_threshold = 8 if astro["is_venus_retro"] else 10
+    if get_angular_distance(astro["sun_lon"], astro["ven_lon"]) < ven_threshold: return True
+    if get_angular_distance(astro["sun_lon"], astro["jup_lon"]) < 11: return True
 
     return False
 
-def evaluate_khandar(tithi: int, nakshatra: int) -> bool:
+def evaluate_khandar(astro, date_obj) -> bool:
+    # Khandar strictly blocks Tuesday (1) and Saturday (5)
+    if date_obj.weekday() in [1, 5]: return False
+    
     allowed_tithis = [2, 3, 5, 7, 10, 11, 12, 13, 17, 18, 20, 22, 25, 26, 27, 28]
     allowed_nakshatras = [4, 5, 10, 12, 13, 15, 17, 19, 21, 26, 27]
-    return (tithi in allowed_tithis) and (nakshatra in allowed_nakshatras)
+    
+    # Tithi must be auspicious from sunrise through sunset
+    if astro["tithi_sunrise"] not in allowed_tithis or astro["tithi_sunset"] not in allowed_tithis: return False
+    if astro["nakshatra_index"] not in allowed_nakshatras: return False
+    return True
 
-def evaluate_mekhal(tithi: int, nakshatra: int, sun_rashi: int) -> bool:
+def evaluate_mekhal(astro, date_obj) -> bool:
+    if date_obj.weekday() in [1, 5]: return False
+    if astro["sun_rashi"] not in [10, 11, 12, 1, 2, 3]: return False # Uttarayana only
+    
     allowed_tithis = [2, 3, 5, 7, 10, 11, 13, 17, 18, 20, 22, 25, 26, 28]
     allowed_nakshatras = [1, 7, 8, 13, 14, 15, 22, 23, 24, 5, 27]
-    # Mekhal is strictly performed during Uttarayana (Sun moving North: Capricorn to Gemini)
-    is_uttarayana = sun_rashi in [10, 11, 12, 1, 2, 3]
-    return (tithi in allowed_tithis) and (nakshatra in allowed_nakshatras) and is_uttarayana
+    
+    if astro["tithi_sunrise"] not in allowed_tithis or astro["tithi_sunset"] not in allowed_tithis: return False
+    if astro["nakshatra_index"] not in allowed_nakshatras: return False
+    return True
 
-def evaluate_kahnethar(tithi: int, nakshatra: int) -> bool:
-    # Including 6 and 21 to ensure Shashthi is mapped properly
+def evaluate_kahnethar(astro, date_obj) -> bool:
+    # Kahnethar blocks Sunday (6) in addition to Tuesday (1) and Saturday (5)
+    if date_obj.weekday() in [1, 5, 6]: return False
+    
     allowed_tithis = [2, 3, 5, 6, 7, 10, 11, 12, 13, 17, 18, 20, 21, 22, 25, 26, 27, 28]
     allowed_nakshatras = [1, 4, 5, 8, 12, 13, 14, 15, 17, 21, 22, 23, 24, 26, 27]
-    return (tithi in allowed_tithis) and (nakshatra in allowed_nakshatras)
+    
+    if astro["tithi_sunrise"] not in allowed_tithis or astro["tithi_sunset"] not in allowed_tithis: return False
+    if astro["nakshatra_index"] not in allowed_nakshatras: return False
+    return True
 
 def evaluate_day(date_obj, event_type: str, config: dict) -> dict:
-    from .astro_calc import get_srinagar_sunrise, get_tithi_and_nakshatra
+    from .astro_calc import get_astro_data
+    astro_data = get_astro_data(date_obj)
     
-    jd_sunrise = get_srinagar_sunrise(date_obj)
-    astro_data = get_tithi_and_nakshatra(jd_sunrise)
-    
-    t_idx = astro_data["tithi_index"]
-    n_idx = astro_data["nakshatra_index"]
-    sun_rashi = astro_data["sun_rashi"]
-    
-    # Run the strict global Panchang filters first
-    is_blocked = check_global_blockers(astro_data, date_obj)
-    
-    if is_blocked:
-        is_ausp = False
-    elif event_type == "khandar":
-        is_ausp = evaluate_khandar(t_idx, n_idx)
-    elif event_type == "mekhal":
-        is_ausp = evaluate_mekhal(t_idx, n_idx, sun_rashi)
-    elif event_type == "kahnethar":
-        is_ausp = evaluate_kahnethar(t_idx, n_idx)
-    else:
-        is_ausp = False
+    if check_global_blockers(astro_data, date_obj): is_ausp = False
+    elif event_type == "khandar": is_ausp = evaluate_khandar(astro_data, date_obj)
+    elif event_type == "mekhal": is_ausp = evaluate_mekhal(astro_data, date_obj)
+    elif event_type == "kahnethar": is_ausp = evaluate_kahnethar(astro_data, date_obj)
+    else: is_ausp = False
 
+    t_idx = astro_data["tithi_sunrise"]
+    n_idx = astro_data["nakshatra_index"]
     return {
         "date": date_obj.strftime("%Y-%m-%d"),
         "tithi": TITHI_NAMES[t_idx - 1] if 1 <= t_idx <= 30 else "Unknown",
