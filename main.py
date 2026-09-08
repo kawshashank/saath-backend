@@ -1,5 +1,6 @@
 import os
 import datetime
+from typing import Literal
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -17,7 +18,7 @@ app.add_middleware(
 )
 
 class SaathRequest(BaseModel):
-    event_type: str
+    event_type: Literal["kahnethar"]
     start_date: str
     end_date: str
     config: dict = {}
