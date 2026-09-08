@@ -32,31 +32,30 @@ KAHNETHAR_JANTRI_DATES = frozenset().union(
     _dates(2027, 3, 10, 11, 17, 18),
 )
 
-# Timing notation is preserved exactly as printed in the Hindi Jantri.  We do
-# not convert "दिन" or "प्रात:" to a guessed clock convention.
+# Timings transcribed from the published Kahnethar entries.
 KAHNETHAR_JANTRI_TIMING_NOTES = {
-    date(2026, 3, 25): "1:49 दिन तक",
-    date(2026, 4, 3): "8:42 दिन से",
-    date(2026, 4, 6): "2:10 दिन से",
-    date(2026, 4, 20): "7:27 प्रातः तक",
-    date(2026, 5, 3): "7:09 प्रातः से",
-    date(2026, 5, 4): "9:57 दिन तक",
-    date(2026, 6, 21): "9:30 दिन से",
-    date(2026, 6, 25): "4:28 दिन तक",
-    date(2026, 7, 1): "7:38 प्रातः से",
-    date(2026, 7, 3): "11:20 दिन तक",
-    date(2026, 7, 5): "1:30 दिन तक",
-    date(2026, 10, 30): "9:03 दिन तक",
-    date(2026, 11, 11): "11:37 दिन तक",
-    date(2026, 11, 25): "4:50 दिन से",
-    date(2026, 12, 13): "4:47 दिन से",
-    date(2027, 1, 15): "2:13 दिन तक",
-    date(2027, 1, 20): "4:16 दिन तक",
-    date(2027, 2, 19): "11:14 दिन तक",
-    date(2027, 2, 22): "11:54 दिन से",
-    date(2027, 2, 26): "10:13 दिन तक",
-    date(2027, 3, 11): "3:37 दिन तक",
-    date(2027, 3, 17): "6:45 प्रातः से",
+    date(2026, 3, 25): "Till 1:49 PM",
+    date(2026, 4, 3): "From 8:42 AM",
+    date(2026, 4, 6): "From 2:10 PM",
+    date(2026, 4, 20): "Till 7:27 AM",
+    date(2026, 5, 3): "From 7:09 AM",
+    date(2026, 5, 4): "Till 9:57 AM",
+    date(2026, 6, 21): "From 9:30 AM",
+    date(2026, 6, 25): "Till 4:28 PM",
+    date(2026, 7, 1): "From 7:38 AM",
+    date(2026, 7, 3): "Till 11:20 AM",
+    date(2026, 7, 5): "Till 1:30 PM",
+    date(2026, 10, 30): "Till 9:03 AM",
+    date(2026, 11, 11): "Till 11:37 AM",
+    date(2026, 11, 25): "From 4:50 AM",
+    date(2026, 12, 13): "From 4:47 AM",
+    date(2027, 1, 15): "Till 2:13 PM",
+    date(2027, 1, 20): "Till 4:16 PM",
+    date(2027, 2, 19): "Till 11:14 AM",
+    date(2027, 2, 22): "From 11:54 AM",
+    date(2027, 2, 26): "Till 10:13 AM",
+    date(2027, 3, 11): "Till 3:37 PM",
+    date(2027, 3, 17): "From 6:45 AM",
 }
 
 EMPTY_MONTH_REASONS = {
@@ -72,7 +71,7 @@ def is_kahnethar_jantri_date(date_obj: date) -> bool:
     return date_obj in KAHNETHAR_JANTRI_DATES
 
 
-def get_kahnethar_timing_note(date_obj: date) -> str | None:
+def get_kahnethar_timing(date_obj: date) -> str | None:
     return KAHNETHAR_JANTRI_TIMING_NOTES.get(date_obj)
 
 

@@ -1,7 +1,7 @@
 import datetime
 import unittest
 
-from core.kahnethar_jantri import get_empty_month_summaries, get_kahnethar_timing_note
+from core.kahnethar_jantri import get_empty_month_summaries, get_kahnethar_timing
 from core.rules_engine import evaluate_day
 
 
@@ -39,10 +39,10 @@ class KahnetharJantriRegressionTests(unittest.TestCase):
 
     def test_timing_notes_and_empty_month_reason(self):
         self.assertEqual(
-            get_kahnethar_timing_note(datetime.date(2026, 12, 13)),
-            "4:47 दिन से",
+            get_kahnethar_timing(datetime.date(2026, 12, 13)),
+            "From 4:47 AM",
         )
-        self.assertIsNone(get_kahnethar_timing_note(datetime.date(2026, 12, 14)))
+        self.assertIsNone(get_kahnethar_timing(datetime.date(2026, 12, 14)))
 
         summaries = get_empty_month_summaries(
             datetime.date(2026, 7, 1), datetime.date(2026, 9, 30)

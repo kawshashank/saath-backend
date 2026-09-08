@@ -91,8 +91,8 @@ def evaluate_day(date_obj, event_type: str, config: dict) -> dict:
         "is_auspicious": is_ausp
     }
     if event_type == "kahnethar" and is_ausp:
-        from .kahnethar_jantri import get_kahnethar_timing_note
-        timing_note = get_kahnethar_timing_note(date_obj)
-        if timing_note:
-            result["jantri_timing"] = timing_note
+        from .kahnethar_jantri import get_kahnethar_timing
+        timing = get_kahnethar_timing(date_obj)
+        if timing:
+            result["timing"] = timing
     return result
