@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from core.rules_engine import evaluate_day
+from core.kahnethar_jantri import JANTRI_COVERAGE_END, JANTRI_COVERAGE_START
 
 app = FastAPI(title="Vijayshwar Saath Calculator Engine")
 
@@ -35,8 +36,15 @@ def calculate_muhurat(request: SaathRequest):
             results.append(day_eval)
         current_date += datetime.timedelta(days=1)
         
-    return {
+    response = {
         "event": request.event_type,
         "range": f"{request.start_date} to {request.end_date}",
         "auspicious_days": results
     }
+    if request.event_type == "kahnethar":
+        response["source"] = "Vijayshwar Jantri (published Jatakarma/Kahnethar Saath)"
+        response["coverage"] = (
+            f"{JANTRI_COVERAGE_START.isoformat()} to "
+            f"{JANTRI_COVERAGE_END.isoformat()}"
+        )
+    return response

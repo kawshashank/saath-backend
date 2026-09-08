@@ -5,10 +5,18 @@ from core.rules_engine import evaluate_day
 
 
 class KahnetharJantriRegressionTests(unittest.TestCase):
-    """Published Vijayshwar Jantri dates; never use these as runtime data."""
+    """Verify the source-backed Vijayshwar Jantri date index."""
 
     def test_known_jantri_windows(self):
         cases = {
+            (2026, 3): {20, 25, 27},
+            (2026, 4): {3, 6, 20, 23, 29},
+            (2026, 5): {3, 4},
+            (2026, 6): {17, 21, 24, 25},
+            (2026, 7): {1, 2, 3, 5},
+            (2026, 8): set(),
+            (2026, 9): {17, 21, 23, 24},
+            (2026, 10): {30},
             (2026, 11): {11, 20, 22, 25, 26},
             (2026, 12): {13, 14},
             (2027, 1): {15, 20},

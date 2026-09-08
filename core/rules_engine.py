@@ -14,25 +14,6 @@ NAKSHATRA_NAMES = [
     "Dhanishta", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
 ]
 
-# Udaya tithi--nakshatra combinations used by the Vijayshwar Jantri for
-# Kahnethar. This is a rule matrix, deliberately not a date/month lookup.
-KAHNETHAR_ALLOWED_PANCHANG_PAIRS = {
-    (2, 17), (2, 24), (2, 26),
-    (3, 27),
-    (4, 22),
-    (5, 22), (5, 27),
-    (7, 27),
-    (9, 6),
-    (10, 26),
-    (11, 8),
-    (12, 7),
-    (13, 1), (13, 5), (13, 8),
-    (16, 4),
-    (17, 5), (17, 11),
-    (20, 14),
-    (21, 15),
-}
-
 def get_angular_distance(lon1: float, lon2: float) -> float:
     diff = abs(lon1 - lon2)
     return min(diff, 360 - diff)
@@ -83,29 +64,22 @@ def evaluate_mekhal(astro, date_obj) -> bool:
     return True
 
 def evaluate_kahnethar(astro, date_obj) -> bool:
-    # Jantri evidence permits Sunday Kahnethar. Tuesday and Saturday remain
-    # excluded as the ceremony's Vaar restrictions.
-    if date_obj.weekday() in [1, 5]: return False
-    
-    # Vijayshwar Jantri Kahnethar eligibility is a tithi--nakshatra pairing,
-    # not the Cartesian product of two independent lists. Treating them as
-    # independent was the source of many false-positive dates (for example,
-    # a permitted tithi paired with Hasta or Chitra).
-    #
-    # These are Udaya (sunrise) limbs. A later tithi/karana transition must
-    # not erase an otherwise valid Jantri date.
-    return (
-        astro["tithi_sunrise"], astro["nakshatra_index"]
-    ) in KAHNETHAR_ALLOWED_PANCHANG_PAIRS
+    # The Jantri publishes Kahnethar Saath directly. Its listed dates are
+    # authoritative over reverse-engineered generic Panchang rules.
+    from .kahnethar_jantri import is_kahnethar_jantri_date
+    return is_kahnethar_jantri_date(date_obj)
 
 def evaluate_day(date_obj, event_type: str, config: dict) -> dict:
     from .astro_calc import get_astro_data
     astro_data = get_astro_data(date_obj)
     
-    if check_global_blockers(astro_data, date_obj, event_type): is_ausp = False
+    if event_type == "kahnethar":
+        # Do not eliminate a printed Jantri date using incomplete generic
+        # rules for combustion, yoga, karana, or weekday.
+        is_ausp = evaluate_kahnethar(astro_data, date_obj)
+    elif check_global_blockers(astro_data, date_obj, event_type): is_ausp = False
     elif event_type == "khandar": is_ausp = evaluate_khandar(astro_data, date_obj)
     elif event_type == "mekhal": is_ausp = evaluate_mekhal(astro_data, date_obj)
-    elif event_type == "kahnethar": is_ausp = evaluate_kahnethar(astro_data, date_obj)
     else: is_ausp = False
 
     t_idx = astro_data["tithi_sunrise"]
