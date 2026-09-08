@@ -1,6 +1,7 @@
 import datetime
 import unittest
 
+from core.kahnethar_jantri import get_empty_month_summaries, get_kahnethar_timing_note
 from core.rules_engine import evaluate_day
 
 
@@ -35,6 +36,22 @@ class KahnetharJantriRegressionTests(unittest.TestCase):
                     )["is_auspicious"]
                 }
                 self.assertEqual(actual_days, expected_days)
+
+    def test_timing_notes_and_empty_month_reason(self):
+        self.assertEqual(
+            get_kahnethar_timing_note(datetime.date(2026, 12, 13)),
+            "4:47 दिन से",
+        )
+        self.assertIsNone(get_kahnethar_timing_note(datetime.date(2026, 12, 14)))
+
+        summaries = get_empty_month_summaries(
+            datetime.date(2026, 7, 1), datetime.date(2026, 9, 30)
+        )
+        self.assertEqual(summaries, [{
+            "month": "2026-08",
+            "label": "August 2026",
+            "reason": "No Kahnethar Saath is listed during Shukra Ash / As-Sang.",
+        }])
 
     @staticmethod
     def _is_valid_date(year, month, day):

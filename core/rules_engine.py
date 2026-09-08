@@ -84,9 +84,15 @@ def evaluate_day(date_obj, event_type: str, config: dict) -> dict:
 
     t_idx = astro_data["tithi_sunrise"]
     n_idx = astro_data["nakshatra_index"]
-    return {
+    result = {
         "date": date_obj.strftime("%Y-%m-%d"),
         "tithi": TITHI_NAMES[t_idx - 1] if 1 <= t_idx <= 30 else "Unknown",
         "nakshatra": NAKSHATRA_NAMES[n_idx - 1] if 1 <= n_idx <= 27 else "Unknown",
         "is_auspicious": is_ausp
     }
+    if event_type == "kahnethar" and is_ausp:
+        from .kahnethar_jantri import get_kahnethar_timing_note
+        timing_note = get_kahnethar_timing_note(date_obj)
+        if timing_note:
+            result["jantri_timing"] = timing_note
+    return result
