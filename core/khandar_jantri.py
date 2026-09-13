@@ -7,8 +7,8 @@ astronomical rule or a collection of range-specific exceptions.
 
 from datetime import date, timedelta
 
-JANTRI_COVERAGE_START = date(2026, 4, 16)
-JANTRI_COVERAGE_END = date(2027, 3, 12)
+JANTRI_COVERAGE_START = date(2026, 3, 1)
+JANTRI_COVERAGE_END = date(2027, 3, 31)
 
 def _dates(year: int, month: int, *days: int) -> set[date]:
     return {date(year, month, day) for day in days}
