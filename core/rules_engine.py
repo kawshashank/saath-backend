@@ -41,16 +41,10 @@ def check_global_blockers(astro, date_obj, event_type: str) -> bool:
     return False
 
 def evaluate_khandar(astro, date_obj) -> bool:
-    # Khandar strictly blocks Tuesday (1) and Saturday (5)
-    if date_obj.weekday() in [1, 5]: return False
-    
-    allowed_tithis = [2, 3, 5, 7, 10, 11, 12, 13, 17, 18, 20, 22, 25, 26, 27, 28]
-    allowed_nakshatras = [4, 5, 10, 12, 13, 15, 17, 19, 21, 26, 27]
-    
-    # Tithi must be auspicious from sunrise through sunset
-    if astro["tithi_sunrise"] not in allowed_tithis or astro["tithi_sunset"] not in allowed_tithis: return False
-    if astro["nakshatra_index"] not in allowed_nakshatras: return False
-    return True
+    # The Jantri publishes Khandar Saath directly. Its listed dates are
+    # authoritative over reverse-engineered generic Panchang rules.
+    from .khandar_jantri import is_khandar_jantri_date
+    return is_khandar_jantri_date(date_obj)
 
 def evaluate_mekhal(astro, date_obj) -> bool:
     if date_obj.weekday() in [1, 5]: return False
@@ -73,12 +67,14 @@ def evaluate_day(date_obj, event_type: str, config: dict) -> dict:
     from .astro_calc import get_astro_data
     astro_data = get_astro_data(date_obj)
     
-    if event_type == "kahnethar":
+    if event_type in ["kahnethar", "khandar"]:
         # Do not eliminate a printed Jantri date using incomplete generic
         # rules for combustion, yoga, karana, or weekday.
-        is_ausp = evaluate_kahnethar(astro_data, date_obj)
+        if event_type == "kahnethar":
+            is_ausp = evaluate_kahnethar(astro_data, date_obj)
+        else:
+            is_ausp = evaluate_khandar(astro_data, date_obj)
     elif check_global_blockers(astro_data, date_obj, event_type): is_ausp = False
-    elif event_type == "khandar": is_ausp = evaluate_khandar(astro_data, date_obj)
     elif event_type == "mekhal": is_ausp = evaluate_mekhal(astro_data, date_obj)
     else: is_ausp = False
 
@@ -93,6 +89,11 @@ def evaluate_day(date_obj, event_type: str, config: dict) -> dict:
     if event_type == "kahnethar" and is_ausp:
         from .kahnethar_jantri import get_kahnethar_timing
         timing = get_kahnethar_timing(date_obj)
+        if timing:
+            result["timing"] = timing
+    elif event_type == "khandar" and is_ausp:
+        from .khandar_jantri import get_khandar_timing
+        timing = get_khandar_timing(date_obj)
         if timing:
             result["timing"] = timing
     return result
