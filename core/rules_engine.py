@@ -52,6 +52,19 @@ def evaluate_mekhal(astro, date_obj) -> bool:
     from .mekhal_jantri import is_mekhal_jantri_date
     return is_mekhal_jantri_date(date_obj)
 
+
+def evaluate_shishur(astro, date_obj) -> bool:
+    from .shishur_jantri import is_shishur_jantri_date
+    return is_shishur_jantri_date(date_obj)
+
+def evaluate_gandan(astro, date_obj) -> bool:
+    from .gandan_jantri import is_gandan_jantri_date
+    return is_gandan_jantri_date(date_obj)
+
+def evaluate_pravesh(astro, date_obj) -> bool:
+    from .pravesh_jantri import is_pravesh_jantri_date
+    return is_pravesh_jantri_date(date_obj)
+
 def evaluate_kahnethar(astro, date_obj) -> bool:
     # The Jantri publishes Kahnethar Saath directly. Its listed dates are
     # authoritative over reverse-engineered generic Panchang rules.
@@ -62,15 +75,23 @@ def evaluate_day(date_obj, event_type: str, config: dict) -> dict:
     from .astro_calc import get_astro_data
     astro_data = get_astro_data(date_obj)
     
-    if event_type in ["kahnethar", "khandar", "mekhal"]:
+    if event_type in ["kahnethar", "khandar", "mekhal", "shishur", "gandan", "pravesh"]:
         # Do not eliminate a printed Jantri date using incomplete generic
         # rules for combustion, yoga, karana, or weekday.
         if event_type == "kahnethar":
             is_ausp = evaluate_kahnethar(astro_data, date_obj)
         elif event_type == "khandar":
             is_ausp = evaluate_khandar(astro_data, date_obj)
-        else:
+        elif event_type == "mekhal":
             is_ausp = evaluate_mekhal(astro_data, date_obj)
+        elif event_type == "shishur":
+            is_ausp = evaluate_shishur(astro_data, date_obj)
+        elif event_type == "gandan":
+            is_ausp = evaluate_gandan(astro_data, date_obj)
+        elif event_type == "pravesh":
+            is_ausp = evaluate_pravesh(astro_data, date_obj)
+        else:
+            is_ausp = False
     elif check_global_blockers(astro_data, date_obj, event_type): is_ausp = False
     else: is_ausp = False
 
@@ -97,4 +118,20 @@ def evaluate_day(date_obj, event_type: str, config: dict) -> dict:
         timing = get_mekhal_timing(date_obj)
         if timing:
             result["timing"] = timing
+    elif event_type == "shishur" and is_ausp:
+        from .shishur_jantri import get_shishur_timing
+        timing = get_shishur_timing(date_obj)
+        if timing:
+            result["timing"] = timing
+    elif event_type == "gandan" and is_ausp:
+        from .gandan_jantri import get_gandan_timing
+        timing = get_gandan_timing(date_obj)
+        if timing:
+            result["timing"] = timing
+    elif event_type == "pravesh" and is_ausp:
+        from .pravesh_jantri import get_pravesh_timing
+        timing = get_pravesh_timing(date_obj)
+        if timing:
+            result["timing"] = timing
+    return result
     return result
