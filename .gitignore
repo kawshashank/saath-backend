@@ -4,3 +4,6 @@ core/__pycache__/rules_engine.cpython-314.pyc
 tests/__pycache__/test_khandar_regression.cpython-314.pyc
 core/__pycache__/mekhal_jantri.cpython-314.pyc
 tests/__pycache__/test_mekhal_regression.cpython-314.pyc
+core/__pycache__/gandan_jantri.cpython-314.pyc
+core/__pycache__/pravesh_jantri.cpython-314.pyc
+core/__pycache__/shishur_jantri.cpython-314.pyc
