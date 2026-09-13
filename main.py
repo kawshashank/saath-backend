@@ -15,6 +15,11 @@ from core.khandar_jantri import (
     JANTRI_COVERAGE_START as KHANDAR_START,
     get_empty_month_summaries as get_khandar_empty,
 )
+from core.mekhal_jantri import (
+    JANTRI_COVERAGE_END as MEKHAL_END,
+    JANTRI_COVERAGE_START as MEKHAL_START,
+    get_empty_month_summaries as get_mekhal_empty,
+)
 
 app = FastAPI(title="Vijayshwar Saath Calculator Engine")
 
@@ -27,7 +32,7 @@ app.add_middleware(
 )
 
 class SaathRequest(BaseModel):
-    event_type: Literal["kahnethar", "khandar"]
+    event_type: Literal["kahnethar", "khandar", "mekhal"]
     start_date: str
     end_date: str
     config: dict = {}
@@ -39,8 +44,12 @@ def calculate_muhurat(request: SaathRequest):
     if start > end:
         raise HTTPException(status_code=422, detail="Start date must not be after end date.")
         
-    c_start = KAHN_START if request.event_type == "kahnethar" else KHANDAR_START
-    c_end = KAHN_END if request.event_type == "kahnethar" else KHANDAR_END
+    if request.event_type == "kahnethar":
+        c_start, c_end = KAHN_START, KAHN_END
+    elif request.event_type == "khandar":
+        c_start, c_end = KHANDAR_START, KHANDAR_END
+    else:
+        c_start, c_end = MEKHAL_START, MEKHAL_END
     
     if start < c_start or end > c_end:
         raise HTTPException(
@@ -69,4 +78,6 @@ def calculate_muhurat(request: SaathRequest):
         response["empty_months"] = get_kahn_empty(start, end)
     elif request.event_type == "khandar":
         response["empty_months"] = get_khandar_empty(start, end)
+    elif request.event_type == "mekhal":
+        response["empty_months"] = get_mekhal_empty(start, end)
     return response
