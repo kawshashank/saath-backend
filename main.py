@@ -13,7 +13,7 @@ from core.shishur_jantri import JANTRI_COVERAGE_END as SHISHUR_END, JANTRI_COVER
 from core.gandan_jantri import JANTRI_COVERAGE_END as GANDAN_END, JANTRI_COVERAGE_START as GANDAN_START, get_empty_month_summaries as get_gandan_empty
 from core.pravesh_jantri import JANTRI_COVERAGE_END as PRAVESH_END, JANTRI_COVERAGE_START as PRAVESH_START, get_empty_month_summaries as get_pravesh_empty
 
-app = FastAPI(title="Vijayshwar Saath Calculator Engine")
+app = FastAPI(title="Traditional Saath Calculator Engine")
 
 app.add_middleware(
     CORSMiddleware,
